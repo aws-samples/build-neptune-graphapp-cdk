@@ -27,7 +27,7 @@ export const handler: Handler = async (event) => {
       mimeType: "application/vnd.gremlin-v2.0+json",
       headers: headers,
     });
-    c._client._connection.on("close", (code: number, message: string) => {
+    c._client._connection.on("close", (code, message) => {
       console.info(`close - ${code} ${message}`);
       if (code == 1006) {
         console.error("Connection closed prematurely");

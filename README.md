@@ -1,10 +1,14 @@
 # Graph Application using Amazon Neptune
 
+## Architecture overview
+
+![Archiecture overview](./docs/images/architecture.png)
+
 ## Prerequisites
 
 - Node.js >= 18.19.0
 - An AWS Account
-- AWS CLI
+- AWS CDK CLI
 - Configuration and credential file settings
   - See [the doc](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) in detail
 - Docker
@@ -20,7 +24,6 @@ Copy `config.sample.ts` and paste the file as `config.ts`. Then modify the `base
 const baseConfig = {
   appName: "graphApp",
   region: "us-east-1",
-  buildApiWithCDK: true,
   adminEmail: "your_email@acme.com",
   allowedIps: [],
   wafParamName: "graphAppWafWebACLID",
@@ -123,15 +126,11 @@ End streaming response%
 
 ## Useful commands
 
-- `npm run deployInfra`
-
+- `npm run deployBackend`
   - Deploy the infrastructure stack with AWS CDK
-
 - `npm run deployFrontend`
-
   - Deploy the frontend stack with AWS CDK
-
-- `npm run destroyInfra`
+- `npm run destroyBackend`
   - Destroy the infrastructure stack with AWS CDK
 - `npm run destroyFrontend`
   - Destroy the frontend stack with AWS CDK

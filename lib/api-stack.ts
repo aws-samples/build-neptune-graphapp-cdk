@@ -7,7 +7,6 @@ import { Api, S3Uri } from "./constructs/api";
 import * as path from "path";
 
 interface ApiStackProps extends StackProps {
-  buildApiWithCDK: boolean;
   cognito: {
     adminEmail: string;
     userName?: string;
@@ -20,28 +19,18 @@ interface ApiStackProps extends StackProps {
 }
 
 export class ApiStack extends Stack {
-  public readonly cognito: Cognito | undefined;
+  public readonly cognito: Cognito;
   public readonly graphqlUrl: string;
   constructor(scope: Construct, id: string, props: ApiStackProps) {
-    const {
-      buildApiWithCDK,
-      cognito,
-      vpc,
-      cluster,
-      clusterRole,
-      graphqlFieldName,
-      s3Uri,
-    } = props;
+    const { cognito, vpc, cluster, clusterRole, graphqlFieldName, s3Uri } =
+      props;
     super(scope, id, props);
-    this.cognito = buildApiWithCDK
-      ? new Cognito(this, "cognito", {
-          adminEmail: cognito.adminEmail,
-          userName: cognito.userName,
-          refreshTokenValidity: Duration.days(1),
-        })
-      : undefined;
+    this.cognito = new Cognito(this, "cognito", {
+      adminEmail: cognito.adminEmail,
+      userName: cognito.userName,
+      refreshTokenValidity: Duration.days(1),
+    });
     const api = new Api(this, "api", {
-      buildApiWithCDK,
       schema: path.join(__dirname, "../api/graphql/schema.graphql"),
       vpc,
       cluster,

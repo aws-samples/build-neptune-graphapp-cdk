@@ -1,10 +1,4 @@
-import {
-  CfnOutput,
-  RemovalPolicy,
-  StackProps,
-  aws_ec2,
-  aws_logs,
-} from "aws-cdk-lib";
+import { RemovalPolicy, StackProps, aws_ec2, aws_logs } from "aws-cdk-lib";
 import { NagSuppressions } from "cdk-nag";
 
 import { Construct } from "constructs";
@@ -87,13 +81,6 @@ export class Network extends Construct {
       service: aws_ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
       vpc: this.vpc,
       privateDnsEnabled: true,
-    });
-
-    // Output
-    this.vpc.isolatedSubnets.map((ISubnet: aws_ec2.ISubnet, index: number) => {
-      new CfnOutput(this, `IsolatedSubnetId${index}`, {
-        value: ISubnet.subnetId,
-      });
     });
 
     // Nag supressions

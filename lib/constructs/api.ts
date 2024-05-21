@@ -23,9 +23,8 @@ import { NagSuppressions } from "cdk-nag";
 import { Cognito } from "./cognito";
 
 export interface BackendApiProps {
-  buildApiWithCDK: boolean;
   schema: string;
-  cognito: Cognito | undefined;
+  cognito: Cognito;
   vpc: aws_ec2.Vpc;
   cluster: neptune.DatabaseCluster;
   clusterRole: aws_iam.Role;
@@ -44,21 +43,55 @@ export class Api extends Construct {
   constructor(scope: Construct, id: string, props: BackendApiProps) {
     super(scope, id);
 
-    const {
-      buildApiWithCDK,
-      schema,
-      vpc,
-      cluster,
-      clusterRole,
-      graphqlFieldName,
-      s3Uri,
-    } = props;
+    const { schema, vpc, cluster, clusterRole, graphqlFieldName, s3Uri } =
+      props;
 
-    // Lambda role for accessing to Neptune
+    // AWS AppSync
+    const graphql = new GraphqlApi(this, "graphql", {
+      name: id,
+      definition: Definition.fromFile(schema),
+      logConfig: {
+        fieldLogLevel: FieldLogLevel.ERROR,
+        role: new aws_iam.Role(this, "appsync-log-role", {
+          assumedBy: new aws_iam.ServicePrincipal("appsync.amazonaws.com"),
+          inlinePolicies: {
+            logs: new aws_iam.PolicyDocument({
+              statements: [
+                new aws_iam.PolicyStatement({
+                  actions: [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                  ],
+                  resources: [
+                    `arn:aws:logs:${Stack.of(this).region}:${
+                      Stack.of(this).account
+                    }`,
+                  ],
+                }),
+              ],
+            }),
+          },
+        }),
+      },
+      authorizationConfig: {
+        defaultAuthorization: {
+          authorizationType: AuthorizationType.USER_POOL,
+          userPoolConfig: {
+            userPool: props.cognito.userPool,
+            appIdClientRegex: props.cognito.cognitoParams.userPoolClientId,
+            defaultAction: UserPoolDefaultAction.ALLOW,
+          },
+        },
+      },
+      xrayEnabled: true,
+    });
+
+    this.graphqlUrl = graphql.graphqlUrl;
+
     const lambdaRole = new aws_iam.Role(this, "lambdaRole", {
       assumedBy: new aws_iam.ServicePrincipal("lambda.amazonaws.com"),
     });
-
     lambdaRole.addToPrincipalPolicy(
       new aws_iam.PolicyStatement({
         resources: ["*"],
@@ -76,7 +109,8 @@ export class Api extends Construct {
       })
     );
     cluster.grantConnect(lambdaRole);
-    // Base Lambda props
+
+    // AWS Lambda for graph application
     const NodejsFunctionBaseProps: aws_lambda_nodejs.NodejsFunctionProps = {
       runtime: aws_lambda.Runtime.NODEJS_20_X,
 
@@ -93,114 +127,34 @@ export class Api extends Construct {
         nodeModules: ["gremlin", "gremlin-aws-sigv4"],
       },
     };
-    if (buildApiWithCDK) {
-      // AWS AppSync
-      const graphql = new GraphqlApi(this, "graphql", {
-        name: id,
-        definition: Definition.fromFile(schema),
-        logConfig: {
-          fieldLogLevel: FieldLogLevel.ERROR,
-          role: new aws_iam.Role(this, "appsync-log-role", {
-            assumedBy: new aws_iam.ServicePrincipal("appsync.amazonaws.com"),
-            inlinePolicies: {
-              logs: new aws_iam.PolicyDocument({
-                statements: [
-                  new aws_iam.PolicyStatement({
-                    actions: [
-                      "logs:CreateLogGroup",
-                      "logs:CreateLogStream",
-                      "logs:PutLogEvents",
-                    ],
-                    resources: [
-                      `arn:aws:logs:${Stack.of(this).region}:${
-                        Stack.of(this).account
-                      }`,
-                    ],
-                  }),
-                ],
-              }),
-            },
-          }),
-        },
-        authorizationConfig: {
-          defaultAuthorization: {
-            authorizationType: AuthorizationType.USER_POOL,
-            userPoolConfig: {
-              userPool: props.cognito!.userPool,
-              appIdClientRegex: props.cognito!.cognitoParams.userPoolClientId,
-              defaultAction: UserPoolDefaultAction.ALLOW,
-            },
-          },
-        },
-        xrayEnabled: true,
-      });
+    const queryFn = new aws_lambda_nodejs.NodejsFunction(this, "queryFn", {
+      ...NodejsFunctionBaseProps,
+      entry: "./api/lambda/queryGraph.ts",
+      environment: {
+        NEPTUNE_ENDPOINT: cluster.clusterReadEndpoint.hostname,
+        NEPTUNE_PORT: cluster.clusterReadEndpoint.port.toString(),
+      },
+    });
+    graphql.grantQuery(queryFn);
+    queryFn.connections.allowTo(cluster, aws_ec2.Port.tcp(8182));
 
-      this.graphqlUrl = graphql.graphqlUrl;
-      const queryFn = new aws_lambda_nodejs.NodejsFunction(this, "queryFn", {
+    const mutationFn = new aws_lambda_nodejs.NodejsFunction(
+      this,
+      "mutationFn",
+      {
         ...NodejsFunctionBaseProps,
-        entry: "./api/lambda/queryGraph.ts",
+        entry: "./api/lambda/mutationGraph.ts",
         environment: {
-          NEPTUNE_ENDPOINT: cluster.clusterReadEndpoint.hostname,
-          NEPTUNE_PORT: cluster.clusterReadEndpoint.port.toString(),
+          NEPTUNE_ENDPOINT: cluster.clusterEndpoint.hostname,
+          NEPTUNE_PORT: cluster.clusterEndpoint.port.toString(),
         },
-      });
-
-      graphql.grantQuery(queryFn);
-      queryFn.connections.allowTo(cluster, aws_ec2.Port.tcp(8182));
-
-      const mutationFn = new aws_lambda_nodejs.NodejsFunction(
-        this,
-        "mutationFn",
-        {
-          ...NodejsFunctionBaseProps,
-          entry: "./api/lambda/mutationGraph.ts",
-          environment: {
-            NEPTUNE_ENDPOINT: cluster.clusterEndpoint.hostname,
-            NEPTUNE_PORT: cluster.clusterEndpoint.port.toString(),
-          },
-        }
-      );
-
-      graphql.grantMutation(mutationFn);
-      mutationFn.connections.allowTo(cluster, aws_ec2.Port.tcp(8182));
-
-      graphqlFieldName.map((filedName: string) => {
-        // Data sources
-        const datasource = graphql.addLambdaDataSource(
-          `${filedName}DS`,
-          filedName.startsWith("get") ? queryFn : mutationFn
-        );
-        queryFn.addEnvironment("GRAPHQL_ENDPOINT", this.graphqlUrl);
-        // Resolver
-        datasource.createResolver(`${filedName}Resolver`, {
-          fieldName: `${filedName}`,
-          typeName: filedName.startsWith("get") ? "Query" : "Mutation",
-          requestMappingTemplate: MappingTemplate.fromFile(
-            `./api/graphql/resolvers/requests/${filedName}.vtl`
-          ),
-          responseMappingTemplate: MappingTemplate.fromFile(
-            "./api/graphql/resolvers/responses/default.vtl"
-          ),
-        });
-      });
-
-      // Cfn output and Suppressions
-      new CfnOutput(this, "GraphqlUrl", {
-        value: this.graphqlUrl,
-      });
-      NagSuppressions.addResourceSuppressions(
-        graphql,
-        [
-          {
-            id: "AwsSolutions-IAM5",
-            reason: "Datasorce role",
-          },
-        ],
-        true
-      );
-    }
+      }
+    );
+    graphql.grantMutation(mutationFn);
+    mutationFn.connections.allowTo(cluster, aws_ec2.Port.tcp(8182));
 
     // Function URL
+
     const bulkLoadFn = new aws_lambda_nodejs.NodejsFunction(
       this,
       "bulkLoadFn",
@@ -242,10 +196,45 @@ export class Api extends Construct {
       invokeMode: aws_lambda.InvokeMode.RESPONSE_STREAM,
     });
 
-    // Outputs && Suppressions
+    graphqlFieldName.map((filedName: string) => {
+      // Data sources
+      const datasource = graphql.addLambdaDataSource(
+        `${filedName}DS`,
+        filedName.startsWith("get") ? queryFn : mutationFn
+      );
+      queryFn.addEnvironment("GRAPHQL_ENDPOINT", this.graphqlUrl);
+      // Resolver
+      datasource.createResolver(`${filedName}Resolver`, {
+        fieldName: `${filedName}`,
+        typeName: filedName.startsWith("get") ? "Query" : "Mutation",
+        requestMappingTemplate: MappingTemplate.fromFile(
+          `./api/graphql/resolvers/requests/${filedName}.vtl`
+        ),
+        responseMappingTemplate: MappingTemplate.fromFile(
+          "./api/graphql/resolvers/responses/default.vtl"
+        ),
+      });
+    });
+
+    // Outputs
+    new CfnOutput(this, "GraphqlUrl", {
+      value: this.graphqlUrl,
+    });
     new CfnOutput(this, "FunctionUrl", {
       value: functionUrl.url,
     });
+
+    // Suppressions
+    NagSuppressions.addResourceSuppressions(
+      graphql,
+      [
+        {
+          id: "AwsSolutions-IAM5",
+          reason: "Datasorce role",
+        },
+      ],
+      true
+    );
 
     NagSuppressions.addResourceSuppressions(
       lambdaRole,

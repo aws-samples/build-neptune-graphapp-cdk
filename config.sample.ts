@@ -5,7 +5,6 @@ const stage = "dev";
 const baseConfig = {
   appName: "graphApp",
   region: "us-east-1",
-  buildApiWithCDK: true,
   adminEmail: "your_email@acme.com",
   allowedIps: [],
   wafParamName: "graphAppWafWebACLID",

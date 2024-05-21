@@ -21,7 +21,6 @@ const env = {
   account: process.env.CDK_DEFAULT_ACCOUNT,
   region: deployConfig.region || process.env.CDK_DEFAULT_REGION,
 };
-const { buildApiWithCDK } = deployConfig;
 const neptuneNetwork = new NeptuneNetworkStack(
   app,
   `${appName}-NeptuneNetworkStack`,
@@ -38,7 +37,6 @@ const neptuneNetwork = new NeptuneNetworkStack(
 );
 
 new ApiStack(app, `${appName}-ApiStack`, {
-  buildApiWithCDK,
   cognito: {
     adminEmail: deployConfig.adminEmail,
   },
@@ -50,13 +48,11 @@ new ApiStack(app, `${appName}-ApiStack`, {
   env,
 });
 
-if (buildApiWithCDK) {
-  new WafCloudFrontStack(app, `${appName}-WafStack`, {
-    allowedIps: [],
-    wafParamName: deployConfig.wafParamName,
-    env: {
-      ...env,
-      region: "us-east-1",
-    },
-  });
-}
+new WafCloudFrontStack(app, `${appName}-WafStack`, {
+  allowedIps: deployConfig.allowedIps,
+  wafParamName: deployConfig.wafParamName,
+  env: {
+    ...env,
+    region: "us-east-1",
+  },
+});
