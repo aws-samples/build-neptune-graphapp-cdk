@@ -1,0 +1,13 @@
+!jest.config.js
+node_modules
+invoke.sh
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+config.ts
+cdk-infra.json
+config.ts
+
+#App
+app/web/.env

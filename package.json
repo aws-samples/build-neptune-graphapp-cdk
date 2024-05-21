@@ -1,0 +1,38 @@
+{
+  "name": "graph-app",
+  "version": "0.1.0",
+  "bin": {
+    "cdk": "bin/backend.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk",
+    "generateEnv": "node generateEnv.mjs",
+    "deployBackend": "cdk deploy --app \"npx ts-node --prefer-ts-exts bin/backend.ts\" -O cdk-infra.json",
+    "deployFrontend": "cdk deploy --app \"npx ts-node --prefer-ts-exts bin/frontend.ts\"",
+    "destroyBackend": "cdk destroy --app \"npx ts-node --prefer-ts-exts bin/backend.ts\"",
+    "destroyFrontend": "cdk destroy --app \"npx ts-node --prefer-ts-exts bin/frontend.ts\""
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.137",
+    "@types/jest": "^29.5.12",
+    "@types/lodash": "^4.17.0",
+    "@types/node": "20.12.7",
+    "aws-cdk": "2.139.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.4.5"
+  },
+  "dependencies": {
+    "@aws-cdk/aws-cognito-identitypool-alpha": "^2.139.0-alpha.0",
+    "@aws-cdk/aws-neptune-alpha": "^2.139.0-alpha.0",
+    "aws-cdk-lib": "2.139.0",
+    "cdk-nag": "^2.28.100",
+    "constructs": "^10.0.0",
+    "lodash": "^4.17.21",
+    "source-map-support": "^0.5.21"
+  }
+}

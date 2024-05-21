@@ -1,0 +1,17 @@
+{
+  "name": "functionurl",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-crypto/sha256-js": "^5.2.0",
+    "@aws-sdk/credential-provider-node": "^3.572.0",
+    "@smithy/protocol-http": "^4.0.0",
+    "@smithy/signature-v4": "^3.0.0"
+  }
+}

@@ -1,0 +1,58 @@
+type RelationName {
+  name: String!
+}
+
+type Profile {
+  search_name: String
+  usage: String
+  belong_to: String
+  authored_by: String
+  affiliated_with: String
+  people: String
+  made_by: String
+}
+
+type InsertDataResult {
+  result: String
+}
+type Graph {
+  nodes: [Nodes]
+  links: [Links]
+}
+
+type Nodes {
+  id: String
+  label: String
+}
+
+type Links {
+  source: String
+  target: String
+  value: String
+}
+
+############################### Inputs ###############################
+input InsertDataInput {
+  value: String!
+  name: String
+  edge: String
+  vertex: String
+  property: String
+  source: String
+  sourceLabel: String
+  destination: String
+  destLabel: String
+}
+
+############################### Queries ###############################
+type Query {
+  getRelationName(type: String!, name: String!, value: String!): [RelationName]
+    @aws_cognito_user_pools
+  getProfile(type: String!, name: String!, value: String!): [Profile]
+    @aws_cognito_user_pools
+  getGraph(type: String!, value: String!): Graph @aws_cognito_user_pools
+}
+############################### Mutations ###############################
+type Mutation {
+  insertData(input: InsertDataInput!): InsertDataResult @aws_cognito_user_pools
+}

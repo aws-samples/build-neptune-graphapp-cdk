@@ -1,0 +1,28 @@
+{
+  "availability-zones:account=140767035512:region=us-east-1": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ],
+  "ssm:account=140767035512:parameterName=CognitoParams:region=us-east-1": "{\"userPoolId\":\"us-east-1_zsH279jhh\",\"userPoolClientId\":\"c9prf7il5it7ioq3dlvji5g2c\",\"identityPoolId\":\"us-east-1:0b44688d-c1ed-496e-8e9f-7b7ce9a721a2\"}",
+  "ssm:account=140767035512:parameterName=GraphQl:region=us-east-1": "https://cxb7zk64e5axzo2sywj2xmly4a.appsync-api.us-east-1.amazonaws.com/graphql",
+  "availability-zones:account=309749931644:region=us-east-1": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ],
+  "availability-zones:account=730335228068:region=us-east-1": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ]
+}
