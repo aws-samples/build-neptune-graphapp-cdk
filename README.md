@@ -8,7 +8,7 @@
 
 - Node.js >= 18.19.0
 - An AWS Account
-- AWS CDK CLI
+- AWS CLI
 - Configuration and credential file settings
   - See [the doc](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) in detail
 - Docker
