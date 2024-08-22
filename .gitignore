@@ -7,6 +7,7 @@ node_modules
 cdk.out
 config.ts
 cdk-infra.json
+cdk.context.json
 
 #App
 app/web/.env
